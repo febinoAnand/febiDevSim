@@ -11,16 +11,17 @@
     <aside class="sidebar">
       <div class="sidebar-brand"><span class="brand-icon">&#9679;</span> Device Simulator</div>
       <nav class="sidebar-nav">
-        <a href="#dashboard" data-tab="dashboard"><span class="nav-icon">&#128202;</span> Dashboard</a>
-        <a href="#projects" data-tab="projects"><span class="nav-icon">&#128193;</span> Projects</a>
-        <a href="#devices" data-tab="devices"><span class="nav-icon">&#128225;</span> Virtual Device</a>
+        <a href="dashboard.html" class="active"><span class="nav-icon">&#128202;</span> Dashboard</a>
+        <a href="projects.html" data-module="projects"><span class="nav-icon">&#128193;</span> Projects</a>
+        <a href="devices.html" data-module="devices"><span class="nav-icon">&#128225;</span> Virtual Device</a>
+        <a href="users.html" data-module="users"><span class="nav-icon">&#128100;</span> Users</a>
+        <a href="roles.html" data-module="roles"><span class="nav-icon">&#128274;</span> Roles</a>
         <a href="#" id="logoutBtn"><span class="nav-icon">&#8677;</span> Logout</a>
       </nav>
       <div class="sidebar-footer" id="usernameLabel"></div>
     </aside>
 
     <main class="main-content">
-      <!-- Dashboard tab (summary overview) -->
       <section id="tab-dashboard">
         <div class="section-heading">
           <div>
@@ -31,26 +32,19 @@
 
         <div class="stat-grid" id="statGrid"></div>
 
-        <div class="dashboard-columns">
-          <div class="card">
-            <div class="card-header">
-              <h3>Projects by Status</h3>
-            </div>
-            <div id="projectStatusBreakdown"></div>
+        <div class="card">
+          <div class="card-header">
+            <h3>Last Sent Data by Device</h3>
           </div>
-          <div class="card">
-            <div class="card-header">
-              <h3>Devices by Status</h3>
-            </div>
-            <div id="deviceStatusBreakdown"></div>
-          </div>
+          <div class="line-chart-wrap" id="sentActivityChart"></div>
+          <div class="chart-legend" id="sentActivityLegend"></div>
         </div>
 
         <div class="dashboard-columns">
           <div class="card">
             <div class="card-header">
               <h3>Recent Projects</h3>
-              <a href="#projects" data-tab="projects">View all &rarr;</a>
+              <a href="projects.html">View all &rarr;</a>
             </div>
             <div id="recentProjectsList"></div>
           </div>
@@ -58,144 +52,10 @@
           <div class="card">
             <div class="card-header">
               <h3>Unassigned Devices</h3>
-              <a href="#devices" data-tab="devices">Manage devices &rarr;</a>
+              <a href="devices.html">Manage devices &rarr;</a>
             </div>
             <div id="unassignedDevicesList"></div>
           </div>
-        </div>
-      </section>
-
-      <!-- Projects tab (create form + list, same page) -->
-      <section id="tab-projects" class="hidden">
-        <div class="section-heading">
-          <div>
-            <h2>Projects</h2>
-            <p class="section-subtitle">Organize your virtual devices into projects and track their rollout status.</p>
-          </div>
-        </div>
-
-        <div class="card card-accent form-card">
-          <div class="card-header">
-            <h3><span class="card-title-icon">&#10024;</span> Create a New Project</h3>
-          </div>
-          <form id="newProjectForm">
-            <div class="form-grid">
-              <div class="form-group span-2">
-                <label for="projectName">Project Name *</label>
-                <input type="text" id="projectName" placeholder="e.g. Smart Warehouse Pilot" />
-              </div>
-              <div class="form-group span-2">
-                <label for="projectDescription">Description</label>
-                <textarea id="projectDescription" rows="2" placeholder="What is this project about?"></textarea>
-              </div>
-              <div class="form-group">
-                <label for="projectOwner">Client / Owner</label>
-                <input type="text" id="projectOwner" placeholder="e.g. Acme Logistics" />
-              </div>
-              <div class="form-group">
-                <label for="projectStartDate">Start Date</label>
-                <input type="date" id="projectStartDate" />
-              </div>
-              <div class="form-group">
-                <label for="projectStatus">Status</label>
-                <select id="projectStatus">
-                  <option value="planning">Planning</option>
-                  <option value="active" selected>Active</option>
-                  <option value="on-hold">On Hold</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="projectTags">Tags <span class="label-hint">(comma-separated)</span></label>
-                <input type="text" id="projectTags" placeholder="e.g. warehouse, pilot, iot" />
-              </div>
-              <div class="form-group span-2">
-                <label>Assign Devices <span class="label-hint">(optional, pick any number)</span></label>
-                <div class="device-checkbox-list" id="createProjectDeviceList"></div>
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary btn-gradient" style="width: auto;">+ Create Project</button>
-          </form>
-        </div>
-
-        <div class="filter-bar">
-          <input type="text" id="projectSearchInput" placeholder="&#128269; Search projects by name or client..." />
-          <select id="projectStatusFilter">
-            <option value="">All Statuses</option>
-            <option value="planning">Planning</option>
-            <option value="active">Active</option>
-            <option value="on-hold">On Hold</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-
-        <div id="projectList"></div>
-        <div class="pagination" id="projectPagination"></div>
-      </section>
-
-      <!-- Virtual Device tab -->
-      <section id="tab-devices" class="hidden">
-        <div class="section-heading">
-          <div>
-            <h2>Virtual Device</h2>
-            <p class="section-subtitle">Register simulated devices and monitor their MQTT/HTTP activity.</p>
-          </div>
-        </div>
-
-        <div class="card form-card">
-          <div class="card-header">
-            <h3>Add Virtual Device</h3>
-          </div>
-          <form id="newDeviceForm">
-            <div class="form-group">
-              <label for="deviceName">Device Name</label>
-              <input type="text" id="deviceName" placeholder="e.g. Temp Sensor 02" />
-            </div>
-            <div class="form-group">
-              <label for="deviceLocation">Location</label>
-              <input type="text" id="deviceLocation" placeholder="e.g. Warehouse B" />
-            </div>
-            <div class="form-group">
-              <label for="deviceSerial">Serial Number</label>
-              <input type="text" id="deviceSerial" placeholder="e.g. SN-1004" />
-            </div>
-            <div class="form-group">
-              <label for="deviceType">Type</label>
-              <input type="text" id="deviceType" placeholder="e.g. Temperature Sensor" />
-            </div>
-            <div class="form-group">
-              <label for="deviceProtocol">Protocol</label>
-              <select id="deviceProtocol">
-                <option value="both">MQTT + HTTP</option>
-                <option value="MQTT">MQTT only</option>
-                <option value="HTTP">HTTP only</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: auto;">Add Device</button>
-          </form>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <h3>All Virtual Devices</h3>
-          </div>
-          <div class="filter-bar">
-            <input type="text" id="deviceSearchInput" placeholder="&#128269; Search by name or serial no..." />
-            <select id="deviceStatusFilter">
-              <option value="">All Statuses</option>
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-              <option value="idle">Idle</option>
-            </select>
-            <select id="deviceProtocolFilter">
-              <option value="">All Protocols</option>
-              <option value="MQTT">MQTT</option>
-              <option value="HTTP">HTTP</option>
-              <option value="both">MQTT + HTTP</option>
-            </select>
-          </div>
-          <div id="deviceTableWrap"></div>
-          <div class="pagination" id="devicePagination"></div>
         </div>
       </section>
     </main>
@@ -203,6 +63,8 @@
 
   <script src="js/storage.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/nav.js"></script>
   <script src="js/dashboard.js"></script>
 </body>
 </html>

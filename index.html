@@ -13,17 +13,19 @@
     <form id="loginForm" novalidate>
       <div class="form-group">
         <label for="username">Username</label>
-        <input type="text" id="username" name="username" autocomplete="username" placeholder="Enter any username" />
+        <input type="text" id="username" name="username" autocomplete="username" placeholder="Enter your username" value="admin" />
       </div>
       <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter any password" />
+        <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password" value="admin123" />
       </div>
       <div class="login-error" id="loginError"></div>
       <button type="submit" class="btn btn-primary">Log In</button>
     </form>
+    <p class="login-hint">Demo login — Username: <strong>admin</strong> &nbsp; Password: <strong>admin123</strong></p>
   </div>
 
+  <script src="js/storage.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/login.js"></script>
 </body>

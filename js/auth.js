@@ -1,11 +1,22 @@
-// Simple client-side session gating (UI-only, no real credential verification).
+// Client-side session gating backed by the Users/Roles store in AppStorage.
+// Passwords are stored in plain text in localStorage — fine for this UI demo,
+// not a real security boundary.
 var Auth = (function () {
   var SESSION_KEY = "ds_session";
 
-  function login(username) {
+  function authenticate(username, password) {
+    var user = AppStorage.getUserByUsername(username);
+    if (!user || user.password !== password) return null;
+    return user;
+  }
+
+  function login(user) {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({
       loggedIn: true,
-      username: username,
+      userId: user.id,
+      username: user.username,
+      name: user.name,
+      roleId: user.roleId,
       loginAt: new Date().toISOString()
     }));
   }
@@ -33,6 +44,12 @@ var Auth = (function () {
   function requireAuth() {
     if (!isLoggedIn()) {
       window.location.href = "index.html";
+      return;
+    }
+    if (!currentRole()) {
+      // Session predates the Users/Roles model, or its role no longer exists — force a clean re-login
+      // rather than silently rendering a dashboard where every permission check fails.
+      logout();
     }
   }
 
@@ -42,12 +59,26 @@ var Auth = (function () {
     }
   }
 
+  function currentRole() {
+    var session = getSession();
+    if (!session) return null;
+    return AppStorage.getRole(session.roleId) || null;
+  }
+
+  function hasPermission(module, action) {
+    var role = currentRole();
+    return !!(role && role.permissions && role.permissions[module] && role.permissions[module][action]);
+  }
+
   return {
+    authenticate: authenticate,
     login: login,
     logout: logout,
     getSession: getSession,
     isLoggedIn: isLoggedIn,
     requireAuth: requireAuth,
-    redirectIfLoggedIn: redirectIfLoggedIn
+    redirectIfLoggedIn: redirectIfLoggedIn,
+    currentRole: currentRole,
+    hasPermission: hasPermission
   };
 })();

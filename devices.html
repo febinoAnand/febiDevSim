@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Device Simulator — Virtual Device</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-page-module="devices">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><span class="brand-icon">&#9679;</span> Device Simulator</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">&#128202;</span> Dashboard</a>
+        <a href="projects.html" data-module="projects"><span class="nav-icon">&#128193;</span> Projects</a>
+        <a href="devices.html" data-module="devices" class="active"><span class="nav-icon">&#128225;</span> Virtual Device</a>
+        <a href="users.html" data-module="users"><span class="nav-icon">&#128100;</span> Users</a>
+        <a href="roles.html" data-module="roles"><span class="nav-icon">&#128274;</span> Roles</a>
+        <a href="#" id="logoutBtn"><span class="nav-icon">&#8677;</span> Logout</a>
+      </nav>
+      <div class="sidebar-footer" id="usernameLabel"></div>
+    </aside>
+
+    <main class="main-content">
+      <section id="tab-devices">
+        <div class="section-heading">
+          <div>
+            <h2>Virtual Device</h2>
+            <p class="section-subtitle">Register simulated devices and monitor their MQTT/HTTP activity.</p>
+          </div>
+          <a href="device-form.html" class="btn btn-primary btn-gradient" style="width: auto;" id="openCreateDeviceBtn">+ Add Device</a>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>All Virtual Devices</h3>
+          </div>
+          <div class="filter-bar">
+            <input type="text" id="deviceSearchInput" placeholder="&#128269; Search by name or serial no..." />
+            <select id="deviceStatusFilter">
+              <option value="">All Statuses</option>
+              <option value="online">Online</option>
+              <option value="offline">Offline</option>
+              <option value="idle">Idle</option>
+            </select>
+            <select id="deviceProtocolFilter">
+              <option value="">All Protocols</option>
+              <option value="MQTT">MQTT</option>
+              <option value="HTTP">HTTP</option>
+            </select>
+          </div>
+          <div id="deviceTableWrap"></div>
+          <div class="pagination" id="devicePagination"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/devices.js"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Device Simulator — Projects</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-page-module="projects">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><span class="brand-icon">&#9679;</span> Device Simulator</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">&#128202;</span> Dashboard</a>
+        <a href="projects.html" data-module="projects" class="active"><span class="nav-icon">&#128193;</span> Projects</a>
+        <a href="devices.html" data-module="devices"><span class="nav-icon">&#128225;</span> Virtual Device</a>
+        <a href="users.html" data-module="users"><span class="nav-icon">&#128100;</span> Users</a>
+        <a href="roles.html" data-module="roles"><span class="nav-icon">&#128274;</span> Roles</a>
+        <a href="#" id="logoutBtn"><span class="nav-icon">&#8677;</span> Logout</a>
+      </nav>
+      <div class="sidebar-footer" id="usernameLabel"></div>
+    </aside>
+
+    <main class="main-content">
+      <section id="tab-projects">
+        <div class="section-heading">
+          <div>
+            <h2>Projects</h2>
+            <p class="section-subtitle">Organize your virtual devices into projects and track their rollout status.</p>
+          </div>
+          <button type="button" class="btn btn-primary btn-gradient" style="width: auto;" id="openCreateProjectBtn">+ Create Project</button>
+        </div>
+
+        <div class="filter-bar">
+          <input type="text" id="projectSearchInput" placeholder="&#128269; Search projects by name or client..." />
+          <select id="projectStatusFilter">
+            <option value="">All Statuses</option>
+            <option value="planning">Planning</option>
+            <option value="active">Active</option>
+            <option value="on-hold">On Hold</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        <div id="projectList"></div>
+        <div class="pagination" id="projectPagination"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Create/Edit Project modal -->
+  <div class="modal-overlay" id="projectModalOverlay">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
+      <div class="modal-header">
+        <h3 id="projectModalTitle"><span class="card-title-icon">&#10024;</span> Create a New Project</h3>
+        <button type="button" class="modal-close" id="closeCreateProjectBtn" aria-label="Close">&times;</button>
+      </div>
+      <form id="newProjectForm">
+        <div class="form-grid">
+          <div class="form-group span-2">
+            <label for="projectName">Project Name *</label>
+            <input type="text" id="projectName" placeholder="e.g. Smart Warehouse Pilot" />
+          </div>
+          <div class="form-group span-2">
+            <label for="projectDescription">Description</label>
+            <textarea id="projectDescription" rows="2" placeholder="What is this project about?"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="projectOwner">Client / Owner</label>
+            <input type="text" id="projectOwner" placeholder="e.g. Acme Logistics" />
+          </div>
+          <div class="form-group">
+            <label for="projectStartDate">Start Date</label>
+            <input type="date" id="projectStartDate" />
+          </div>
+          <div class="form-group">
+            <label for="projectStatus">Status</label>
+            <select id="projectStatus">
+              <option value="planning">Planning</option>
+              <option value="active" selected>Active</option>
+              <option value="on-hold">On Hold</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="projectTags">Tags <span class="label-hint">(comma-separated)</span></label>
+            <input type="text" id="projectTags" placeholder="e.g. warehouse, pilot, iot" />
+          </div>
+          <div class="form-group span-2" id="createProjectDeviceGroup">
+            <label>Assign Devices <span class="label-hint">(optional, pick any number)</span></label>
+            <input type="text" id="createProjectDeviceSearch" placeholder="&#128269; Search devices by name, serial no, or location..." style="margin-bottom: 8px;" />
+            <div class="device-checkbox-list" id="createProjectDeviceList"></div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-gradient" style="width: auto;" id="projectSubmitBtn">+ Create Project</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/projects.js"></script>
+</body>
+</html>
