@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Device Simulator — Roles &amp; Permissions</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-page-module="roles">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><span class="brand-icon">&#9679;</span> Device Simulator</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">&#128202;</span> Dashboard</a>
+        <a href="projects.html" data-module="projects"><span class="nav-icon">&#128193;</span> Projects</a>
+        <a href="devices.html" data-module="devices"><span class="nav-icon">&#128225;</span> Virtual Device</a>
+        <a href="users.html" data-module="users"><span class="nav-icon">&#128100;</span> Users</a>
+        <a href="roles.html" data-module="roles" class="active"><span class="nav-icon">&#128274;</span> Roles</a>
+        <a href="#" id="logoutBtn"><span class="nav-icon">&#8677;</span> Logout</a>
+      </nav>
+      <div class="sidebar-footer" id="usernameLabel"></div>
+    </aside>
+
+    <main class="main-content">
+      <section id="tab-roles">
+        <div class="section-heading">
+          <div>
+            <h2>Roles &amp; Permissions</h2>
+            <p class="section-subtitle">Decide which users are allowed to create, edit, or delete things.</p>
+          </div>
+          <button type="button" class="btn btn-primary btn-gradient" style="width: auto;" id="openCreateRoleBtn">+ Add Role</button>
+        </div>
+
+        <div class="card">
+          <div id="roleTableWrap"></div>
+          <div class="pagination" id="rolePagination"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Add/Edit Role modal -->
+  <div class="modal-overlay" id="roleModalOverlay">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="roleModalTitle">
+      <div class="modal-header">
+        <h3 id="roleModalTitle"><span class="card-title-icon">&#128274;</span> Add New Role</h3>
+        <button type="button" class="modal-close" id="closeCreateRoleBtn" aria-label="Close">&times;</button>
+      </div>
+      <form id="newRoleForm">
+        <div class="form-group">
+          <label for="roleName">Role Name *</label>
+          <input type="text" id="roleName" placeholder="e.g. Editor" />
+        </div>
+        <div class="form-group">
+          <label>Permissions <span class="label-hint">(toggle Create / Read / Update / Delete per section)</span></label>
+          <div style="overflow-x: auto;">
+            <table class="perm-matrix" id="rolePermMatrix">
+              <thead>
+                <tr><th>Section</th><th>Create</th><th>Read</th><th>Update</th><th>Delete</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="login-error" id="roleFormError"></div>
+        <button type="submit" class="btn btn-primary btn-gradient" style="width: auto;" id="roleSubmitBtn">+ Add Role</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/roles.js"></script>
+</body>
+</html>

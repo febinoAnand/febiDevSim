@@ -1,96 +1,4 @@
 (function () {
-  Auth.requireAuth();
-  AppStorage.init();
-
-  var session = Auth.getSession();
-  document.getElementById("usernameLabel").textContent = session ? "Signed in as " + session.username : "";
-
-  var navTabs = document.querySelectorAll(".sidebar-nav a[data-tab]");
-  var allTabTriggers = document.querySelectorAll("[data-tab]");
-  var sections = {
-    dashboard: document.getElementById("tab-dashboard"),
-    projects: document.getElementById("tab-projects"),
-    devices: document.getElementById("tab-devices")
-  };
-
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
-  function renderPagination(containerId, totalItems, pageSize, currentPage, onChange) {
-    var container = document.getElementById(containerId);
-    var totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-
-    if (totalPages <= 1) {
-      container.innerHTML = "";
-      return;
-    }
-
-    var html = '<button class="page-btn" data-page="prev"' + (currentPage === 1 ? " disabled" : "") + '>&laquo;</button>';
-    for (var i = 1; i <= totalPages; i++) {
-      html += '<button class="page-btn' + (i === currentPage ? " active" : "") + '" data-page="' + i + '">' + i + '</button>';
-    }
-    html += '<button class="page-btn" data-page="next"' + (currentPage === totalPages ? " disabled" : "") + '>&raquo;</button>';
-    container.innerHTML = html;
-
-    container.querySelectorAll(".page-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        if (btn.disabled) return;
-        var val = btn.getAttribute("data-page");
-        var newPage = val === "prev" ? currentPage - 1 : (val === "next" ? currentPage + 1 : parseInt(val, 10));
-        onChange(newPage);
-      });
-    });
-  }
-
-  function activateTab(name) {
-    if (!sections[name]) name = "dashboard";
-
-    navTabs.forEach(function (tab) {
-      var isActive = tab.getAttribute("data-tab") === name;
-      tab.classList.toggle("active", isActive);
-    });
-
-    Object.keys(sections).forEach(function (key) {
-      sections[key].classList.toggle("hidden", key !== name);
-    });
-
-    if (name === "dashboard") renderDashboard();
-    if (name === "projects") {
-      renderProjects();
-      renderCreateProjectDeviceOptions();
-    }
-    if (name === "devices") renderDevices();
-  }
-
-  function currentTabFromHash() {
-    var hash = window.location.hash.replace("#", "");
-    return sections[hash] ? hash : "dashboard";
-  }
-
-  window.addEventListener("hashchange", function () {
-    activateTab(currentTabFromHash());
-  });
-
-  allTabTriggers.forEach(function (tab) {
-    tab.addEventListener("click", function (event) {
-      event.preventDefault();
-      var name = tab.getAttribute("data-tab");
-      window.location.hash = name;
-      activateTab(name);
-    });
-  });
-
-  document.getElementById("logoutBtn").addEventListener("click", function (event) {
-    event.preventDefault();
-    Auth.logout();
-  });
-
   var STATUS_LABELS = {
     planning: "Planning",
     active: "Active",
@@ -98,33 +6,153 @@
     completed: "Completed"
   };
 
-  var DEVICE_STATUS_LABELS = { online: "Online", offline: "Offline", idle: "Idle" };
+  var CHART_COLORS = ["#4f7cff", "#8a5cf6", "#35c56a", "#e8a53d", "#ef5a6f", "#33bfe0"];
 
-  // ---------- Dashboard ----------
+  function extractNumericValue(payloadStr) {
+    try {
+      var obj = JSON.parse(payloadStr);
+      for (var key in obj) {
+        if (typeof obj[key] === "number") return obj[key];
+      }
+    } catch (e) {
+      // not JSON or no numeric field — ignore
+    }
+    return null;
+  }
 
-  function renderBreakdown(counts, labels, badgeClassPrefix) {
-    var total = Object.keys(counts).reduce(function (sum, key) { return sum + counts[key]; }, 0);
+  function formatTime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
 
-    return Object.keys(labels).map(function (key) {
-      var count = counts[key] || 0;
-      var pct = total ? Math.round((count / total) * 100) : 0;
-      return '<div class="breakdown-row">' +
-        '<span class="badge ' + badgeClassPrefix + key + '">' + labels[key] + '</span>' +
-        '<div class="breakdown-bar-track"><div class="breakdown-bar-fill" style="width: ' + pct + '%"></div></div>' +
-        '<span class="breakdown-count">' + count + '</span>' +
-        '</div>';
+  function renderSentActivityChart() {
+    var devices = AppStorage.getDevices();
+    var chartWrap = document.getElementById("sentActivityChart");
+    var legendWrap = document.getElementById("sentActivityLegend");
+
+    var series = [];
+    devices.forEach(function (d) {
+      var points = AppStorage.getLogs(d.id)
+        .filter(function (entry) { return entry.direction === "sent"; })
+        .map(function (entry) { return { value: extractNumericValue(entry.payload), timestamp: entry.timestamp }; })
+        .filter(function (p) { return p.value !== null; })
+        .slice(-15);
+
+      if (points.length >= 2) {
+        series.push({ device: d, points: points });
+      }
+    });
+
+    if (series.length === 0) {
+      chartWrap.innerHTML = '<div class="empty-state">No sent activity yet. Open a device to generate live simulated traffic, then return here to see the trend.</div>';
+      legendWrap.innerHTML = "";
+      return;
+    }
+
+    series = series.slice(0, 6);
+
+    var allValues = [];
+    var allTimes = [];
+    series.forEach(function (s) {
+      s.points.forEach(function (p) {
+        allValues.push(p.value);
+        allTimes.push(new Date(p.timestamp).getTime());
+      });
+    });
+
+    var minVal = Math.min.apply(null, allValues);
+    var maxVal = Math.max.apply(null, allValues);
+    if (minVal === maxVal) { minVal -= 1; maxVal += 1; }
+    var valuePad = (maxVal - minVal) * 0.12;
+    minVal -= valuePad;
+    maxVal += valuePad;
+
+    var minTime = Math.min.apply(null, allTimes);
+    var maxTime = Math.max.apply(null, allTimes);
+    if (minTime === maxTime) { maxTime += 1000; }
+
+    var width = Math.max(320, Math.round(chartWrap.clientWidth) || 640);
+    var height = 190;
+    var marginLeft = 44, marginRight = 14, marginTop = 14, marginBottom = 26;
+    var plotWidth = width - marginLeft - marginRight;
+    var plotHeight = height - marginTop - marginBottom;
+
+    function yFor(v) {
+      return marginTop + plotHeight - ((v - minVal) / (maxVal - minVal)) * plotHeight;
+    }
+    function xFor(ts) {
+      var t = new Date(ts).getTime();
+      return marginLeft + ((t - minTime) / (maxTime - minTime)) * plotWidth;
+    }
+
+    var gridLines = "";
+    var yLabels = "";
+    for (var g = 0; g <= 4; g++) {
+      var gy = marginTop + (plotHeight / 4) * g;
+      gridLines += '<line x1="' + marginLeft + '" y1="' + gy.toFixed(1) + '" x2="' + (width - marginRight) + '" y2="' + gy.toFixed(1) + '" stroke="var(--color-border)" stroke-width="1" />';
+      var gVal = maxVal - (g / 4) * (maxVal - minVal);
+      yLabels += '<text x="' + (marginLeft - 8) + '" y="' + (gy + 3).toFixed(1) + '" text-anchor="end" font-size="10" fill="var(--color-text-muted)">' + (Math.round(gVal * 10) / 10) + '</text>';
+    }
+
+    var xLabels = "";
+    var tickFracs = [0, 1 / 3, 2 / 3, 1];
+    tickFracs.forEach(function (frac, idx) {
+      var t = minTime + frac * (maxTime - minTime);
+      var x = marginLeft + frac * plotWidth;
+      var anchor = idx === 0 ? "start" : (idx === tickFracs.length - 1 ? "end" : "middle");
+      xLabels += '<text x="' + x.toFixed(1) + '" y="' + (height - marginBottom + 18) + '" text-anchor="' + anchor + '" font-size="10" fill="var(--color-text-muted)">' + formatTime(t) + '</text>';
+    });
+
+    var baselineY = marginTop + plotHeight;
+    var defs = "";
+    var areas = "";
+    var polylines = series.map(function (s, i) {
+      var color = CHART_COLORS[i % CHART_COLORS.length];
+      var gradId = "sentChartGrad" + i;
+      var coords = s.points.map(function (p) {
+        return { x: xFor(p.timestamp), y: yFor(p.value), value: p.value, timestamp: p.timestamp };
+      });
+      var pointsAttr = coords.map(function (c) { return c.x.toFixed(1) + "," + c.y.toFixed(1); }).join(" ");
+
+      defs += '<linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.32" />' +
+        '<stop offset="100%" stop-color="' + color + '" stop-opacity="0" />' +
+        '</linearGradient>';
+
+      var areaPath = 'M ' + coords[0].x.toFixed(1) + ',' + baselineY.toFixed(1) + ' ' +
+        coords.map(function (c) { return 'L ' + c.x.toFixed(1) + ',' + c.y.toFixed(1); }).join(" ") +
+        ' L ' + coords[coords.length - 1].x.toFixed(1) + ',' + baselineY.toFixed(1) + ' Z';
+      areas += '<path d="' + areaPath + '" fill="url(#' + gradId + ')" stroke="none" />';
+
+      var dots = coords.map(function (c) {
+        return '<circle cx="' + c.x.toFixed(1) + '" cy="' + c.y.toFixed(1) + '" r="3.5" fill="' + color + '">' +
+          '<title>' + Utils.escapeHtml(s.device.name) + ' — ' + c.value + ' at ' + formatTime(c.timestamp) + '</title>' +
+          '</circle>';
+      }).join("");
+      return '<polyline points="' + pointsAttr + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />' + dots;
+    }).join("");
+
+    chartWrap.innerHTML =
+      '<svg viewBox="0 0 ' + width + ' ' + height + '" class="line-chart-svg">' +
+        '<defs>' + defs + '</defs>' +
+        gridLines +
+        areas +
+        polylines +
+        yLabels +
+        xLabels +
+      '</svg>';
+
+    legendWrap.innerHTML = series.map(function (s, i) {
+      var color = CHART_COLORS[i % CHART_COLORS.length];
+      var last = s.points[s.points.length - 1];
+      return '<span class="legend-item"><span class="legend-dot" style="background:' + color + ';"></span>' +
+        '<span>' + Utils.escapeHtml(s.device.name) + ' <span class="text-muted-sm">' + last.value + ' at ' + formatTime(last.timestamp) + '</span></span>' +
+        '</span>';
     }).join("");
   }
 
   function renderDashboard() {
     var projects = AppStorage.getProjects();
     var devices = AppStorage.getDevices();
-
-    var projectStatusCounts = { planning: 0, active: 0, "on-hold": 0, completed: 0 };
-    projects.forEach(function (p) {
-      var s = p.status || "planning";
-      projectStatusCounts[s] = (projectStatusCounts[s] || 0) + 1;
-    });
 
     var deviceStatusCounts = { online: 0, offline: 0, idle: 0 };
     devices.forEach(function (d) {
@@ -140,7 +168,7 @@
 
     var stats = [
       { label: "Total Projects", value: projects.length, icon: "&#128193;" },
-      { label: "Active Projects", value: projectStatusCounts.active, icon: "&#128640;" },
+      { label: "Active Devices", value: deviceStatusCounts.online, icon: "&#128640;" },
       { label: "Total Devices", value: devices.length, icon: "&#128225;" },
       { label: "Unassigned Devices", value: unassignedDevices.length, icon: "&#128279;" }
     ];
@@ -152,15 +180,7 @@
         '</div>';
     }).join("");
 
-    document.getElementById("projectStatusBreakdown").innerHTML =
-      projects.length
-        ? renderBreakdown(projectStatusCounts, STATUS_LABELS, "badge-status-")
-        : '<div class="text-muted-sm">No projects yet.</div>';
-
-    document.getElementById("deviceStatusBreakdown").innerHTML =
-      devices.length
-        ? renderBreakdown(deviceStatusCounts, DEVICE_STATUS_LABELS, "badge-")
-        : '<div class="text-muted-sm">No devices yet.</div>';
+    renderSentActivityChart();
 
     var recentWrap = document.getElementById("recentProjectsList");
     var recent = projects.slice().sort(function (a, b) {
@@ -173,7 +193,7 @@
       recentWrap.innerHTML = recent.map(function (p) {
         var status = p.status || "planning";
         return '<div class="summary-row">' +
-          '<div><strong>' + escapeHtml(p.name) + '</strong><div class="text-muted-sm">' + p.deviceIds.length + ' device(s)</div></div>' +
+          '<div><strong>' + Utils.escapeHtml(p.name) + '</strong><div class="text-muted-sm">' + p.deviceIds.length + ' device(s)</div></div>' +
           '<span class="badge badge-status-' + status + '">' + STATUS_LABELS[status] + '</span>' +
           '</div>';
       }).join("");
@@ -185,326 +205,13 @@
     } else {
       unassignedWrap.innerHTML = unassignedDevices.map(function (d) {
         return '<div class="summary-row">' +
-          '<div><a href="device-detail.html?id=' + encodeURIComponent(d.id) + '">' + escapeHtml(d.name) + '</a>' +
-          '<div class="text-muted-sm">' + escapeHtml(d.serialNo || "n/a") + '</div></div>' +
-          '<span class="badge badge-' + d.status + '">' + escapeHtml(d.status) + '</span>' +
+          '<div><a href="device-detail.html?id=' + encodeURIComponent(d.id) + '">' + Utils.escapeHtml(d.name) + '</a>' +
+          '<div class="text-muted-sm">' + Utils.escapeHtml(d.serialNo || "n/a") + '</div></div>' +
+          '<span class="badge badge-' + d.status + '">' + Utils.escapeHtml(d.status) + '</span>' +
           '</div>';
       }).join("");
     }
   }
 
-  // ---------- Projects ----------
-
-  var PROJECTS_PAGE_SIZE = 4;
-  var projectsPage = 1;
-
-  function getFilteredProjects() {
-    var searchTerm = document.getElementById("projectSearchInput").value.trim().toLowerCase();
-    var statusFilter = document.getElementById("projectStatusFilter").value;
-
-    return AppStorage.getProjects().filter(function (p) {
-      var matchesSearch = !searchTerm ||
-        p.name.toLowerCase().indexOf(searchTerm) !== -1 ||
-        (p.owner || "").toLowerCase().indexOf(searchTerm) !== -1;
-      var matchesStatus = !statusFilter || (p.status || "planning") === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }
-
-  function renderProjects() {
-    var allProjects = AppStorage.getProjects();
-    var filtered = getFilteredProjects();
-    var wrap = document.getElementById("projectList");
-
-    if (allProjects.length === 0) {
-      wrap.innerHTML = '<div class="card grid-span-full"><div class="empty-state">No projects yet. Create one above to get started.</div></div>';
-      document.getElementById("projectPagination").innerHTML = "";
-      return;
-    }
-
-    if (filtered.length === 0) {
-      wrap.innerHTML = '<div class="card grid-span-full"><div class="empty-state">No projects match your filters.</div></div>';
-      document.getElementById("projectPagination").innerHTML = "";
-      return;
-    }
-
-    var totalPages = Math.max(1, Math.ceil(filtered.length / PROJECTS_PAGE_SIZE));
-    if (projectsPage > totalPages) projectsPage = totalPages;
-
-    var pageItems = filtered.slice((projectsPage - 1) * PROJECTS_PAGE_SIZE, projectsPage * PROJECTS_PAGE_SIZE);
-
-    wrap.innerHTML = pageItems.map(renderProjectCard).join("");
-
-    renderPagination("projectPagination", filtered.length, PROJECTS_PAGE_SIZE, projectsPage, function (newPage) {
-      projectsPage = newPage;
-      renderProjects();
-    });
-
-    pageItems.forEach(function (project) {
-      var addBtn = document.querySelector('[data-add-device-btn="' + project.id + '"]');
-      if (addBtn) {
-        addBtn.addEventListener("click", function () {
-          var select = document.querySelector('[data-device-select="' + project.id + '"]');
-          if (select && select.value) {
-            AppStorage.addDeviceToProject(project.id, select.value);
-            renderProjects();
-          }
-        });
-      }
-
-      var deleteBtn = document.querySelector('[data-delete-project="' + project.id + '"]');
-      if (deleteBtn) {
-        deleteBtn.addEventListener("click", function () {
-          if (confirm('Delete project "' + project.name + '"?')) {
-            AppStorage.deleteProject(project.id);
-            renderProjects();
-          }
-        });
-      }
-
-      project.deviceIds.forEach(function (deviceId) {
-        var removeBtn = document.querySelector('[data-remove-device="' + project.id + '|' + deviceId + '"]');
-        if (removeBtn) {
-          removeBtn.addEventListener("click", function () {
-            AppStorage.removeDeviceFromProject(project.id, deviceId);
-            renderProjects();
-          });
-        }
-      });
-    });
-  }
-
-  function renderProjectCard(project) {
-    var devices = project.deviceIds
-      .map(function (id) { return AppStorage.getDevice(id); })
-      .filter(Boolean);
-
-    var chips = devices.length
-      ? devices.map(function (d) {
-          return '<span class="chip">' +
-            '<a href="device-detail.html?id=' + encodeURIComponent(d.id) + '">' + escapeHtml(d.name) + '</a>' +
-            '<button class="chip-remove" data-remove-device="' + project.id + '|' + d.id + '" title="Remove from project">&times;</button>' +
-            '</span>';
-        }).join("")
-      : '<span class="text-muted-sm">No devices assigned yet.</span>';
-
-    var available = AppStorage.getAvailableDevicesForProject(project.id);
-    var addRow;
-    if (available.length === 0) {
-      addRow = '<div class="text-muted-sm">All devices have already been added to this project.</div>';
-    } else {
-      var options = available.map(function (d) {
-        return '<option value="' + d.id + '">' + escapeHtml(d.name) + ' (' + escapeHtml(d.serialNo || "n/a") + ')</option>';
-      }).join("");
-      addRow = '<div class="add-device-row">' +
-        '<select data-device-select="' + project.id + '">' + options + '</select>' +
-        '<button class="btn btn-sm" data-add-device-btn="' + project.id + '">Add Device</button>' +
-        '</div>';
-    }
-
-    var status = project.status || "planning";
-
-    var tagChips = (project.tags || []).length
-      ? '<div class="tag-list">' + project.tags.map(function (t) {
-          return '<span class="tag">#' + escapeHtml(t) + '</span>';
-        }).join("") + '</div>'
-      : "";
-
-    var metaItems = [];
-    if (project.owner) metaItems.push('<div class="meta-item"><div class="meta-label">Client</div><div class="meta-value">' + escapeHtml(project.owner) + '</div></div>');
-    if (project.startDate) metaItems.push('<div class="meta-item"><div class="meta-label">Start Date</div><div class="meta-value">' + escapeHtml(project.startDate) + '</div></div>');
-    metaItems.push('<div class="meta-item"><div class="meta-label">Devices</div><div class="meta-value">' + devices.length + '</div></div>');
-
-    return '<div class="card project-card">' +
-      '<div class="project-card-accent status-' + status + '"></div>' +
-      '<div class="card-header">' +
-        '<h3>' + escapeHtml(project.name) + '</h3>' +
-        '<button class="btn btn-sm btn-danger" data-delete-project="' + project.id + '">Delete</button>' +
-      '</div>' +
-      '<div class="badge-row">' +
-        '<span class="badge badge-status-' + status + '">' + STATUS_LABELS[status] + '</span>' +
-      '</div>' +
-      (project.description ? '<p class="project-description">' + escapeHtml(project.description) + '</p>' : "") +
-      '<div class="device-meta project-meta">' + metaItems.join("") + '</div>' +
-      tagChips +
-      '<div class="chip-list">' + chips + '</div>' +
-      addRow +
-      '</div>';
-  }
-
-  document.getElementById("projectSearchInput").addEventListener("input", function () {
-    projectsPage = 1;
-    renderProjects();
-  });
-
-  document.getElementById("projectStatusFilter").addEventListener("change", function () {
-    projectsPage = 1;
-    renderProjects();
-  });
-
-  function renderCreateProjectDeviceOptions() {
-    var wrap = document.getElementById("createProjectDeviceList");
-    var devices = AppStorage.getDevices();
-
-    if (devices.length === 0) {
-      wrap.innerHTML = '<div class="text-muted-sm">No virtual devices yet. Add one from the Virtual Device tab first.</div>';
-      return;
-    }
-
-    wrap.innerHTML = devices.map(function (d) {
-      return '<label class="device-checkbox-item">' +
-        '<input type="checkbox" value="' + d.id + '" />' +
-        '<span>' + escapeHtml(d.name) + ' <span class="text-muted-sm">(' + escapeHtml(d.serialNo || "n/a") + (d.location ? " — " + escapeHtml(d.location) : "") + ')</span></span>' +
-        '</label>';
-    }).join("");
-  }
-
-  document.getElementById("newProjectForm").addEventListener("submit", function (event) {
-    event.preventDefault();
-    var form = this;
-    var nameInput = document.getElementById("projectName");
-    var name = nameInput.value.trim();
-    if (!name) return;
-
-    var tagsRaw = document.getElementById("projectTags").value.trim();
-    var tags = tagsRaw
-      ? tagsRaw.split(",").map(function (t) { return t.trim(); }).filter(Boolean)
-      : [];
-
-    var selectedDeviceIds = Array.prototype.map.call(
-      document.querySelectorAll('#createProjectDeviceList input[type="checkbox"]:checked'),
-      function (cb) { return cb.value; }
-    );
-
-    var project = AppStorage.createProject({
-      name: name,
-      description: document.getElementById("projectDescription").value.trim(),
-      owner: document.getElementById("projectOwner").value.trim(),
-      startDate: document.getElementById("projectStartDate").value,
-      status: document.getElementById("projectStatus").value,
-      tags: tags
-    });
-
-    selectedDeviceIds.forEach(function (deviceId) {
-      AppStorage.addDeviceToProject(project.id, deviceId);
-    });
-
-    form.reset();
-    renderCreateProjectDeviceOptions();
-    projectsPage = Math.max(1, Math.ceil(AppStorage.getProjects().length / PROJECTS_PAGE_SIZE));
-    renderProjects();
-  });
-
-  // ---------- Virtual Devices ----------
-
-  var DEVICES_PAGE_SIZE = 5;
-  var devicesPage = 1;
-
-  function getFilteredDevices() {
-    var searchTerm = document.getElementById("deviceSearchInput").value.trim().toLowerCase();
-    var statusFilter = document.getElementById("deviceStatusFilter").value;
-    var protocolFilter = document.getElementById("deviceProtocolFilter").value;
-
-    return AppStorage.getDevices().filter(function (d) {
-      var matchesSearch = !searchTerm ||
-        d.name.toLowerCase().indexOf(searchTerm) !== -1 ||
-        (d.serialNo || "").toLowerCase().indexOf(searchTerm) !== -1;
-      var matchesStatus = !statusFilter || d.status === statusFilter;
-      var matchesProtocol = !protocolFilter || d.protocol === protocolFilter;
-      return matchesSearch && matchesStatus && matchesProtocol;
-    });
-  }
-
-  function renderDevices() {
-    var allDevices = AppStorage.getDevices();
-    var filtered = getFilteredDevices();
-    var wrap = document.getElementById("deviceTableWrap");
-
-    if (allDevices.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">No virtual devices yet. Add one above.</div>';
-      document.getElementById("devicePagination").innerHTML = "";
-      return;
-    }
-
-    if (filtered.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">No devices match your filters.</div>';
-      document.getElementById("devicePagination").innerHTML = "";
-      return;
-    }
-
-    var totalPages = Math.max(1, Math.ceil(filtered.length / DEVICES_PAGE_SIZE));
-    if (devicesPage > totalPages) devicesPage = totalPages;
-
-    var pageItems = filtered.slice((devicesPage - 1) * DEVICES_PAGE_SIZE, devicesPage * DEVICES_PAGE_SIZE);
-
-    var rows = pageItems.map(function (d) {
-      return '<tr>' +
-        '<td><a class="device-link" href="device-detail.html?id=' + encodeURIComponent(d.id) + '">' + escapeHtml(d.name) + '</a></td>' +
-        '<td>' + escapeHtml(d.location || "—") + '</td>' +
-        '<td>' + escapeHtml(d.serialNo || "—") + '</td>' +
-        '<td>' + escapeHtml(d.type || "—") + '</td>' +
-        '<td><span class="badge badge-' + d.status + '">' + escapeHtml(d.status) + '</span></td>' +
-        '<td><span class="badge badge-' + (d.protocol === "HTTP" ? "http" : "mqtt") + '">' + escapeHtml(d.protocol === "both" ? "MQTT + HTTP" : d.protocol) + '</span></td>' +
-        '<td><button class="btn btn-sm btn-danger" data-delete-device="' + d.id + '">Delete</button></td>' +
-        '</tr>';
-    }).join("");
-
-    wrap.innerHTML = '<table><thead><tr>' +
-      '<th>Name</th><th>Location</th><th>Serial No.</th><th>Type</th><th>Status</th><th>Protocol</th><th></th>' +
-      '</tr></thead><tbody>' + rows + '</tbody></table>';
-
-    renderPagination("devicePagination", filtered.length, DEVICES_PAGE_SIZE, devicesPage, function (newPage) {
-      devicesPage = newPage;
-      renderDevices();
-    });
-
-    pageItems.forEach(function (d) {
-      var btn = document.querySelector('[data-delete-device="' + d.id + '"]');
-      if (btn) {
-        btn.addEventListener("click", function () {
-          if (confirm('Delete device "' + d.name + '"? This also removes it from any projects.')) {
-            AppStorage.deleteDevice(d.id);
-            renderDevices();
-          }
-        });
-      }
-    });
-  }
-
-  document.getElementById("deviceSearchInput").addEventListener("input", function () {
-    devicesPage = 1;
-    renderDevices();
-  });
-
-  document.getElementById("deviceStatusFilter").addEventListener("change", function () {
-    devicesPage = 1;
-    renderDevices();
-  });
-
-  document.getElementById("deviceProtocolFilter").addEventListener("change", function () {
-    devicesPage = 1;
-    renderDevices();
-  });
-
-  document.getElementById("newDeviceForm").addEventListener("submit", function (event) {
-    event.preventDefault();
-    var nameInput = document.getElementById("deviceName");
-    var name = nameInput.value.trim();
-    if (!name) return;
-
-    AppStorage.createDevice({
-      name: name,
-      location: document.getElementById("deviceLocation").value.trim(),
-      serialNo: document.getElementById("deviceSerial").value.trim(),
-      type: document.getElementById("deviceType").value.trim(),
-      protocol: document.getElementById("deviceProtocol").value
-    });
-
-    this.reset();
-    devicesPage = Math.max(1, Math.ceil(AppStorage.getDevices().length / DEVICES_PAGE_SIZE));
-    renderDevices();
-  });
-
-  // ---------- Init ----------
-  activateTab(currentTabFromHash());
+  renderDashboard();
 })();

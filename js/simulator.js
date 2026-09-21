@@ -26,23 +26,50 @@ var Simulator = (function () {
     return JSON.stringify(_pick(samples)());
   }
 
+  // Builds a "sent" payload from the device's configured sample message, jittering
+  // any numeric fields a little so repeated ticks aren't perfectly identical.
+  function _payloadFromSample(device) {
+    var sample = (device.sampleMessage || "").trim();
+    if (!sample) return _randomPayload();
+
+    if (device.messageType === "String") {
+      return sample;
+    }
+
+    try {
+      var obj = JSON.parse(sample);
+      Object.keys(obj).forEach(function (key) {
+        if (typeof obj[key] === "number") {
+          var jitter = (Math.random() - 0.5) * obj[key] * 0.1;
+          obj[key] = Math.round((obj[key] + jitter) * 100) / 100;
+        }
+      });
+      return JSON.stringify(obj);
+    } catch (e) {
+      return sample;
+    }
+  }
+
   function _generateEntry(device) {
     var protocol = _pickProtocol(device);
     var direction = Math.random() < 0.5 ? "sent" : "received";
     var isError = Math.random() < 0.08;
     var isTimeout = !isError && Math.random() < 0.04;
     var status = isError ? "error" : (isTimeout ? "timeout" : "ok");
+    var address = device.host ? device.host + (device.port ? ":" + device.port : "") : null;
 
     var topicOrEndpoint;
     if (protocol === "MQTT") {
-      topicOrEndpoint = _pick([
+      var topic = _pick([
         "devices/" + device.id + "/telemetry",
         "devices/" + device.id + "/status",
         "devices/" + device.id + "/command"
       ]);
+      topicOrEndpoint = (address ? address + " — " : "") + topic;
     } else {
       var method = direction === "sent" ? _pick(["POST", "PUT"]) : "GET";
-      topicOrEndpoint = method + " /api/devices/" + device.id + (direction === "sent" ? "/telemetry" : "/status");
+      var path = "/api/devices/" + device.id + (direction === "sent" ? "/telemetry" : "/status");
+      topicOrEndpoint = method + " " + (address ? "http://" + address : "") + path;
     }
 
     return {
@@ -51,7 +78,7 @@ var Simulator = (function () {
       protocol: protocol,
       direction: direction,
       topicOrEndpoint: topicOrEndpoint,
-      payload: _randomPayload(),
+      payload: direction === "sent" ? _payloadFromSample(device) : _randomPayload(),
       status: status
     };
   }
@@ -59,11 +86,13 @@ var Simulator = (function () {
   function start(device, onNewEntry) {
     stop();
 
+    var baseInterval = (Number(device.interval) > 0 ? Number(device.interval) : 3) * 1000;
+
     function tick() {
       var entry = _generateEntry(device);
       AppStorage.appendLog(device.id, entry);
       if (typeof onNewEntry === "function") onNewEntry(entry);
-      timerId = setTimeout(tick, 2000 + Math.random() * 1500);
+      timerId = setTimeout(tick, baseInterval + Math.random() * (baseInterval * 0.4));
     }
 
     timerId = setTimeout(tick, 1200);

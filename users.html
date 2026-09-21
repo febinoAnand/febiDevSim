@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Device Simulator — Users</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-page-module="users">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><span class="brand-icon">&#9679;</span> Device Simulator</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">&#128202;</span> Dashboard</a>
+        <a href="projects.html" data-module="projects"><span class="nav-icon">&#128193;</span> Projects</a>
+        <a href="devices.html" data-module="devices"><span class="nav-icon">&#128225;</span> Virtual Device</a>
+        <a href="users.html" data-module="users" class="active"><span class="nav-icon">&#128100;</span> Users</a>
+        <a href="roles.html" data-module="roles"><span class="nav-icon">&#128274;</span> Roles</a>
+        <a href="#" id="logoutBtn"><span class="nav-icon">&#8677;</span> Logout</a>
+      </nav>
+      <div class="sidebar-footer" id="usernameLabel"></div>
+    </aside>
+
+    <main class="main-content">
+      <section id="tab-users">
+        <div class="section-heading">
+          <div>
+            <h2>Users</h2>
+            <p class="section-subtitle">Manage who can access this workspace.</p>
+          </div>
+          <button type="button" class="btn btn-primary btn-gradient" style="width: auto;" id="openCreateUserBtn">+ Add User</button>
+        </div>
+
+        <div class="filter-bar">
+          <input type="text" id="userSearchInput" placeholder="&#128269; Search by username, name, or email..." />
+          <select id="userRoleFilter">
+            <option value="">All Roles</option>
+          </select>
+        </div>
+
+        <div class="card">
+          <div id="userTableWrap"></div>
+          <div class="pagination" id="userPagination"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Add/Edit User modal -->
+  <div class="modal-overlay" id="userModalOverlay">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+      <div class="modal-header">
+        <h3 id="userModalTitle"><span class="card-title-icon">&#128100;</span> Add New User</h3>
+        <button type="button" class="modal-close" id="closeCreateUserBtn" aria-label="Close">&times;</button>
+      </div>
+      <form id="newUserForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="userUsername">Username *</label>
+            <input type="text" id="userUsername" placeholder="e.g. jdoe" />
+          </div>
+          <div class="form-group">
+            <label for="userName">Full Name *</label>
+            <input type="text" id="userName" placeholder="e.g. Jane Doe" />
+          </div>
+          <div class="form-group span-2">
+            <label for="userEmail">Email</label>
+            <input type="text" id="userEmail" placeholder="e.g. jane@example.com" />
+          </div>
+          <div class="form-group">
+            <label for="userPassword" id="userPasswordLabel">Password *</label>
+            <input type="password" id="userPassword" placeholder="Set a password" />
+          </div>
+          <div class="form-group">
+            <label for="userRole">Role *</label>
+            <select id="userRole"></select>
+          </div>
+        </div>
+        <div class="login-error" id="userFormError"></div>
+        <button type="submit" class="btn btn-primary btn-gradient" style="width: auto;" id="userSubmitBtn">+ Add User</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/users.js"></script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 (function () {
+  AppStorage.init();
   Auth.redirectIfLoggedIn();
 
   var form = document.getElementById("loginForm");
@@ -15,8 +16,14 @@
       return;
     }
 
+    var user = Auth.authenticate(username, password);
+    if (!user) {
+      errorEl.textContent = "Invalid username or password.";
+      return;
+    }
+
     errorEl.textContent = "";
-    Auth.login(username);
+    Auth.login(user);
     window.location.href = "dashboard.html";
   });
 })();

@@ -2,6 +2,11 @@
   Auth.requireAuth();
   AppStorage.init();
 
+  if (!Auth.hasPermission("devices", "read")) {
+    window.location.href = "dashboard.html";
+    return;
+  }
+
   var content = document.getElementById("deviceContent");
 
   function escapeHtml(str) {
@@ -19,29 +24,40 @@
 
   if (!device) {
     content.innerHTML = '<div class="card"><div class="empty-state">' +
-      'Device not found. <a href="dashboard.html">Return to dashboard</a>.' +
+      'Device not found. <a href="devices.html">Return to Virtual Devices</a>.' +
       '</div></div>';
     return;
   }
+
+  var canClearLogs = Auth.hasPermission("devices", "delete");
+  var canEditDevice = Auth.hasPermission("devices", "update");
 
   content.innerHTML =
     '<div class="device-detail-grid">' +
     '<div class="card">' +
       '<div class="card-header">' +
         '<h3>' + escapeHtml(device.name) + '</h3>' +
-        '<span class="badge badge-' + device.status + '">' + escapeHtml(device.status) + '</span>' +
+        '<span class="flex gap-sm">' +
+          '<span class="badge badge-' + device.status + '">' + escapeHtml(device.status) + '</span>' +
+          (canEditDevice ? '<a class="btn btn-sm" href="device-form.html?id=' + encodeURIComponent(device.id) + '">Edit</a>' : "") +
+        '</span>' +
       '</div>' +
       '<div class="device-meta">' +
         '<div class="meta-item"><div class="meta-label">Location</div><div class="meta-value">' + escapeHtml(device.location || "—") + '</div></div>' +
         '<div class="meta-item"><div class="meta-label">Serial No.</div><div class="meta-value">' + escapeHtml(device.serialNo || "—") + '</div></div>' +
         '<div class="meta-item"><div class="meta-label">Type</div><div class="meta-value">' + escapeHtml(device.type || "—") + '</div></div>' +
-        '<div class="meta-item"><div class="meta-label">Protocol</div><div class="meta-value">' + escapeHtml(device.protocol === "both" ? "MQTT + HTTP" : device.protocol) + '</div></div>' +
+        '<div class="meta-item"><div class="meta-label">Protocol</div><div class="meta-value">' + escapeHtml(device.protocol) + '</div></div>' +
+        '<div class="meta-item"><div class="meta-label">Host</div><div class="meta-value">' + escapeHtml(device.host || "—") + '</div></div>' +
+        '<div class="meta-item"><div class="meta-label">Port</div><div class="meta-value">' + escapeHtml(device.port || "—") + '</div></div>' +
+        '<div class="meta-item"><div class="meta-label">Message Type</div><div class="meta-value">' + escapeHtml(device.messageType || "—") + '</div></div>' +
+        '<div class="meta-item"><div class="meta-label">Interval</div><div class="meta-value">' + (device.interval ? device.interval + "s" : "—") + '</div></div>' +
       '</div>' +
+      (device.sampleMessage ? '<div class="meta-item" style="margin-top: 12px;"><div class="meta-label">Sample Message</div><div class="meta-value" style="white-space: pre-wrap; word-break: break-word;">' + escapeHtml(device.sampleMessage) + '</div></div>' : "") +
     '</div>' +
     '<div class="card">' +
       '<div class="card-header">' +
         '<h3><span class="live-dot"></span>&nbsp; Live Activity Log</h3>' +
-        '<button class="btn btn-sm" id="clearLogsBtn">Clear Logs</button>' +
+        (canClearLogs ? '<button class="btn btn-sm" id="clearLogsBtn">Clear Logs</button>' : "") +
       '</div>' +
       '<div class="filter-bar">' +
         '<select id="logProtocolFilter">' +
@@ -136,10 +152,13 @@
     document.getElementById(id).addEventListener("change", renderFilteredLogs);
   });
 
-  document.getElementById("clearLogsBtn").addEventListener("click", function () {
-    AppStorage.clearLogs(device.id);
-    loadExistingLogs();
-  });
+  var clearLogsBtn = document.getElementById("clearLogsBtn");
+  if (clearLogsBtn) {
+    clearLogsBtn.addEventListener("click", function () {
+      AppStorage.clearLogs(device.id);
+      loadExistingLogs();
+    });
+  }
 
   loadExistingLogs();
   Simulator.start(device, addNewEntry);

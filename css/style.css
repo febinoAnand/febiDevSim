@@ -131,6 +131,19 @@ h1, h2, h3 {
   font-size: 0.9rem;
 }
 
+.login-hint {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  margin: 20px 0 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.login-hint strong {
+  color: var(--color-text);
+}
+
 .login-error {
   color: var(--color-danger);
   font-size: 0.85rem;
@@ -489,40 +502,37 @@ input:focus, select:focus, textarea:focus {
   gap: 16px;
 }
 
-.breakdown-row {
+.line-chart-wrap {
+  width: 100%;
+}
+
+.line-chart-svg {
+  width: 100%;
+  height: 190px;
+  display: block;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.legend-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-}
-
-.breakdown-row .badge {
-  flex-shrink: 0;
-  width: 96px;
-  text-align: center;
-}
-
-.breakdown-bar-track {
-  flex: 1;
-  height: 8px;
-  background: var(--color-surface-alt);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.breakdown-bar-fill {
-  height: 100%;
-  background: var(--gradient-primary);
-  border-radius: 999px;
-  transition: width 0.3s ease;
-}
-
-.breakdown-count {
-  flex-shrink: 0;
-  width: 24px;
-  text-align: right;
+  gap: 8px;
   font-size: 0.85rem;
-  color: var(--color-text-muted);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .summary-row {
@@ -620,6 +630,14 @@ input:focus, select:focus, textarea:focus {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.project-link {
+  color: var(--color-text);
+}
+
+.project-link:hover {
+  color: var(--color-primary-hover);
 }
 
 .project-description {
@@ -747,6 +765,88 @@ tbody tr:hover {
   border-color: var(--color-border);
 }
 
+/* ===== Permission matrix / toggle switches ===== */
+.perm-matrix {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.perm-matrix th,
+.perm-matrix td {
+  text-align: center;
+  padding: 10px 12px;
+}
+
+.perm-matrix th:first-child,
+.perm-matrix td:first-child {
+  text-align: left;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  vertical-align: middle;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  transition: var(--transition);
+}
+
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  top: 2px;
+  background: var(--color-text-muted);
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--gradient-primary);
+  border-color: transparent;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+  background: #fff;
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.perm-dot {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.perm-dot.perm-yes {
+  color: var(--color-success);
+}
+
+.perm-dot.perm-no {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
 
 /* ===== Project device chips ===== */
 .chip-list {
@@ -824,6 +924,72 @@ tbody tr:hover {
 .device-checkbox-item input[type="checkbox"] {
   width: auto;
   accent-color: var(--color-primary);
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 15, 0.65);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px 24px 24px;
+  z-index: 1000;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+
+.modal-overlay.open {
+  visibility: visible;
+  opacity: 1;
+}
+
+.modal-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px;
+  transform: translateY(-14px);
+  transition: transform 0.18s ease;
+}
+
+.modal-overlay.open .modal-box {
+  transform: translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: var(--transition);
+}
+
+.modal-close:hover {
+  color: var(--color-danger);
+  background: var(--color-surface-alt);
 }
 
 /* ===== Device detail ===== */
@@ -1024,11 +1190,6 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
-  .breakdown-row .badge {
-    width: 76px;
-    font-size: 0.68rem;
-  }
-
   .filter-bar {
     flex-direction: column;
   }
@@ -1037,5 +1198,20 @@ tbody tr:hover {
   .filter-bar select {
     width: 100%;
     min-width: 0;
+  }
+
+  .modal-overlay {
+    padding: 16px;
+    align-items: center;
+  }
+
+  .modal-box {
+    padding: 20px;
+    max-height: 90vh;
+  }
+
+  .section-heading {
+    flex-wrap: wrap;
+    gap: 12px;
   }
 }
